@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <script src="./static/js/jquery-1.11.1.min.js"></script>
+    <script src="./static/js/bootstrap.min.js"></script>
+    <script src="./static/js/webuploader.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./static/css/webuploader.css">
+    <link rel="stylesheet" type="text/css" href="./static/css/bootstrap.min.css">
+    <title>demo</title>
+</head>
+
+<body>
+    <div style="margin:50px 0;">
+        <div id="picker" style="float:left;">选择文件</div>
+        <div id="progress" class="progress" style="width:500px;float:left;margin:10px 0 0 20px;">
+            <div class="progress-bar progress-bar-striped active" role="progressbar" style="width:0%;"></div>
+        </div>
+        <div style="clear:both;"></div>
+    </div>
+
+    <script type="text/javascript">
+        var chunk_num = 0;
+        $(document).ready(function () {
+            var GUID = WebUploader.Base.guid();
+            var uploader = WebUploader.create({
+                swf: './static/swf/Uploader.swf',
+                server: '/fileupload',
+                pick: '#picker',
+                auto: true,
+                chunked: true,
+                chunkSize: 20 * 1024 * 1024,
+                chunkRetry: 3,
+                threads: 1,
+                duplicate: true,
+                method: 'POST',
+                formData: {
+                    guid: GUID,//按理chunked设置为true后会自动传guid，但是没有传，这里我就手动加进去了，效果相同
+                    chunk: chunk_num++,
+                },
+            });
+            uploader.on('startUpload', function () {
+                $('#progress').show();
+                $('.progress-bar').css('width', '0%');
+                $('.progress-bar').text('0%');
+                $('.progress-bar').removeClass('progress-bar-danger progress-bar-success');
+                $('.progress-bar').addClass('active progress-bar-striped');
+            });
+
+            uploader.on('uploadProgress', function (file, percentage) {
+                $('.progress-bar').css('width', percentage * 100 - 1 + '%');
+                $('.progress-bar').text(Math.floor(percentage * 100 - 1) + '%');
+            });
+
+            uploader.on('uploadSuccess', function (file) {
+                chunk_num = 0;
+                var data = { 'guid': GUID, 'ext': file.source['ext'], 'type': file.source['type'], 'name': file.source['name'] };
+                $.get('/uploadsuccess', data);
+                $('.progress-bar').css('width', '100%');
+                $('.progress-bar').text('100%');
+                $('.progress-bar').addClass('progress-bar-success');
+                $('.progress-bar').text('上传完成');
+            });
+
+            uploader.on('uploadError', function (file) {
+                $('.progress-bar').css('width', '100%');
+                $('.progress-bar').text('100%');
+                $('.progress-bar').addClass('progress-bar-danger');
+                $('.progress-bar').text('上传失败');
+            });
+
+            uploader.on('uploadComplete', function (file) {
+                $('.progress-bar').removeClass('active progress-bar-striped');
+            });
+
+            $('#progress').hide();
+        });
+    </script>
+</body>
+
+</html>
